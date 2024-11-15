@@ -17,10 +17,17 @@ const login = async (page) => {
 }
 
 const fetch = async (page) => {
-    
+    const data = await page.evaluate(async () => {
+        const response = await fetch('https://affilisting.com/list', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        return response.json();
+    });
 
-    // Navigate to a page that makes API requests
-    await page.goto('https://affilisting.com/list');
+    console.log(data);
 }
 
 (async () => {
@@ -37,20 +44,6 @@ const fetch = async (page) => {
         height: 1080,
         deviceScaleFactor: 1,
         isMobile: false
-    });
-
-    await page.setRequestInterception(true);
-
-    page.on('response', async (response) => {
-        const url = response.url();
-        console.log(url);
-        // const headers = response.headers();
-        // const status = response.status();
-        // console.log(url, headers['content-type'], status)
-        // if (url.includes('https://affilisting.com/list') && headers['content-type'] === 'application/json' && status === 200) {
-        //     const data = await response.json();
-        //     console.log(data);
-        // }
     });
 
     await login(page);
