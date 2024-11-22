@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const mongoose = require('mongoose');
 const Program = require('./models/program');
 const cheerio = require('cheerio');
+const axios = require('axios');
 
 
 mongoose.connect(process.env.MONGODB_URI, {})
@@ -28,35 +29,26 @@ const doLogin = async (page) => {
     }
 };
 
-const getRedirectedLink = async (page, uuid) => {
+const getRefs = async (page, uuid) => {
     try {
-        const response = await page.goto(`https://affilisting.com/${uuid}/apply`, {
+        const response = await page.goto(`https://affilisting.com/redirect/${uuid}/apply`, {
             waitUntil: 'networkidle2'
         });
-        const redirectedUrl = response.url();
-        return redirectedUrl;
+        const link = response.url();
+        const html = await page.content();
+        const $ = cheerio.load(html);
+        const description = $('meta[name="description"]').attr('content');
+        const image = $('meta[name="og:image"]').attr('content');
+        return {
+            link,
+            description,
+            image
+        };
     } catch (error) {
         console.error('Failed to fetch redirected link:', error);
         return null;
     }
 };
-
-const getSiteDescription = async (url) => {
-    try {
-        const { data } = await axios.get(url);
-        const $ = cheerio.load(data);
-        const description = $('meta[name="description"]').attr('content');
-        const image = $('meta[name="og:image"]').attr('content');
-        return {
-            description: description || 'No description available',
-            image: image || '#'
-        };
-    } catch (error) {
-        console.error('Failed to fetch site description:', error);
-        return null;
-    }
-};
-
 
 
 const getPrograms = async (page) => {
@@ -105,10 +97,14 @@ const getPrograms = async (page) => {
 
 
         for (const program of data) {
-            const link = await getRedirectedLink(page, program.uuid);
-            console.log(`Redirected link for ${program.uuid}: ${link}`);
-            const { description, image } = getSiteDescription(link);
-            console.log(description, image);
+            const {
+                link,
+                description,
+                image
+            } = await getRefs(page, program.uuid);
+            console.log(link);
+            console.log(description);
+            console.log(image);
             await new Promise((resolve, reject) => setTimeout(resolve, 1000));
         }
 
