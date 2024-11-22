@@ -23,7 +23,6 @@ const doLogin = async (page) => {
         await page.click("button[type='submit']");
         await page.waitForNetworkIdle();
 
-
     } catch (error) {
         console.error('Login failed:', error);
     }
@@ -37,12 +36,14 @@ const getRefs = async (page, uuid) => {
         const link = response.url();
         const html = await page.content();
         const $ = cheerio.load(html);
+        const socials = getSocials(html);
         const description = $('meta[name="description"]').attr('content');
         const image = $('meta[name="og:image"]').attr('content');
         return {
             link,
             description,
-            image
+            image,
+            socials,
         };
     } catch (error) {
         console.error('Failed to fetch redirected link:', error);
@@ -51,12 +52,32 @@ const getRefs = async (page, uuid) => {
 };
 
 
+const getSocials = (html) => {
+    try {
+        const $ = cheerio.load(html, { decodeEntities: false });
+        const pattern =
+            /(?:https?:\/\/)?(?:www\.)?(?:facebook|fb|twitter|linkedin|instagram|youtube)\.com\/(?:[\w\-\.]+\/?)+/g;
+        const links = new Set();
+        $("a").each((_, anchor) => {
+            const href = $(anchor).attr("href");
+            if (href && pattern.test(href)) {
+                links.add(href);
+            }
+        });
+        return [...links];
+    } catch (error) {
+        console.error("Error extracting data from HTML:", error);
+        return [];
+    }
+};
+
+
 const getPrograms = async (page) => {
     try {
-        const json_string = await page.evaluate((x_xsrf_token) => {
+        const json_string = await page.evaluate(({ x_xsrf_token, page }) => {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('GET', 'https://affilisting.com/list', true);
+                xhr.open('GET', `https://affilisting.com/list?page=${page}`, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.setRequestHeader("x-inertia", true);
                 xhr.setRequestHeader("x-inertia-version", 'fc9556c08ecbf859722f010bee10ca59');
@@ -75,7 +96,7 @@ const getPrograms = async (page) => {
                 };
                 xhr.send();
             });
-        }, x_xsrf_token);
+        }, { x_xsrf_token, page: n });
 
         const json_data = JSON.parse(json_string);
         let { data = [], next_page_url = undefined } = json_data.props.affiliates;
@@ -85,41 +106,58 @@ const getPrograms = async (page) => {
         } else
             n = 1;
 
-        data = data.map(item => {
+        data = data.map(async item => {
             const tags = item.tags.map(tag => tag.id);
             const commission_type = item.type?.machine_name;
             const langs = item.langs.map(item => item.id)
             const platform = item.platform?.id;
-            return { ...item, tags, langs, platform, commission_type };
-        })
 
-        // Program.insertMany(data);
-
-
-        for (const program of data) {
             const {
                 link,
                 description,
-                image
-            } = await getRefs(page, program.uuid);
+                image,
+                socials
+            } = await getRefs(page, item.uuid);
+
+            return { ...item, tags, langs, platform, commission_type, link, description, image, socials };
+        })
+
+        for (let i = 0; i < data.length; i++) {
+            const {
+                link,
+                description,
+                image,
+                socials
+            } = await getRefs(page, data[i].uuid);
+
             console.log(link);
             console.log(description);
             console.log(image);
+            console.log(socials);
+
+            data[i].link = link;
+            data[i].description = description;
+            data[i].image = image;
+            data[i].socials = socials;
             await new Promise((resolve, reject) => setTimeout(resolve, 1000));
         }
+
+        await Program.insertMany(data);
 
     } catch (error) {
         console.error('Data fetch failed:', error);
     }
 };
 
-(async () => {
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
 
+cron.schedule('* * */1 * *', async () => {
+    console.log(`Scraping page ${n}`);
     try {
+        const browser = await puppeteer.launch({
+            headless: false,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
+
         const page = await browser.newPage();
         await page.setViewport({
             width: 1280,
@@ -151,4 +189,4 @@ const getPrograms = async (page) => {
     } finally {
         await browser.close(); // Ensure the browser closes regardless of errors
     }
-})();
+})

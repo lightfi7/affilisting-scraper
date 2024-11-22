@@ -91,6 +91,16 @@ const ProgramSchema = new Schema({
         type: Object,
         default: null,
     },
+    description: {
+        type: String,
+    },
+    link: {
+        type: String,
+    },
+    image: {
+        type: String,
+    },
+    contacts: [{ type: String }]
 });
 
 const Program = mongoose.model("programs", ProgramSchema);
