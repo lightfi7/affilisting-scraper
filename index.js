@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Program = require('./models/program');
 const cheerio = require('cheerio');
 const axios = require('axios');
+const { timeout } = require('puppeteer');
 
 
 mongoose.connect(process.env.MONGODB_URI, {})
@@ -31,7 +32,8 @@ const doLogin = async (page) => {
 const getRefs = async (page, uuid) => {
     try {
         const response = await page.goto(`https://affilisting.com/redirect/${uuid}/apply`, {
-            waitUntil: 'networkidle2'
+            waitUntil: 'networkidle2',
+            timeout: 30000
         });
         const link = response.url();
         const html = await page.content();
@@ -144,7 +146,7 @@ const getPrograms = async (page) => {
             data[i].description = description;
             data[i].image = image;
             data[i].socials = socials;
-            await new Promise((resolve, reject) => setTimeout(resolve, 1000));
+            await new Promise((resolve, reject) => setTimeout(resolve, 3000));
         }
 
         await Program.insertMany(data);
