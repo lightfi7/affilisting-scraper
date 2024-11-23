@@ -47,7 +47,12 @@ const getRefs = async (page, uuid) => {
         };
     } catch (error) {
         console.error('Failed to fetch redirected link:', error);
-        return null;
+        return {
+            link: null,
+            description: null,
+            image: null,
+            socials: [],
+        };
     }
 };
 
