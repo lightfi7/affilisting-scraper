@@ -155,15 +155,59 @@ const getPrograms = async (page) => {
 };
 
 
-cron.schedule('*/30 * * * *', async () => {
+(async () => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            // env: {
-            //     DISPLAY: ":10.0"
-            // }
+            env: {
+                DISPLAY: ":10.0"
+            }
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 1280,
+            height: 768,
+            deviceScaleFactor: 1,
+            isMobile: false
+        });
+
+        // Set request interception to capture the XSRF token
+        await page.setRequestInterception(true);
+        page.on('request', (request) => {
+            if (request.url().startsWith('https://affilisting.com/')) {
+                x_xsrf_token = request.headers()['x-xsrf-token'];
+            }
+            request.continue();
+        });
+
+        // Validate environment variables
+        if (!process.env.EMAIL || !process.env.PASSWORD) {
+            throw new Error('EMAIL and PASSWORD must be set in environment variables.');
+        }
+
+        await doLogin(page);
+        await getPrograms(page);
+
+        await page.screenshot({ path: 'example.png' });
+    } catch (error) {
+        console.error('An error occurred:', error);
+    } finally {
+        await browser.close(); // Ensure the browser closes regardless of errors
+    }
+})();
+
+cron.schedule('*/60 * * * *', async () => {
+    console.log(`Scraping page ${n}`);
+    try {
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            env: {
+                DISPLAY: ":10.0"
+            }
         });
 
         const page = await browser.newPage();
