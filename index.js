@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const Program = require('./models/program');
 const cheerio = require('cheerio');
 const axios = require('axios');
-const { timeout } = require('puppeteer');
 
 
 mongoose.connect(process.env.MONGODB_URI, {})
@@ -32,8 +31,7 @@ const doLogin = async (page) => {
 const getRefs = async (page, uuid) => {
     try {
         const response = await page.goto(`https://affilisting.com/redirect/${uuid}/apply`, {
-            waitUntil: 'networkidle2',
-            timeout: 30000
+            waitUntil: 'networkidle2'
         });
         const link = response.url();
         const html = await page.content();
@@ -119,35 +117,28 @@ const getPrograms = async (page) => {
             const langs = item.langs.map(item => item.id)
             const platform = item.platform?.id;
 
-            const {
-                link,
-                description,
-                image,
-                socials
-            } = await getRefs(page, item.uuid);
-
-            return { ...item, tags, langs, platform, commission_type, link, description, image, socials };
+            return { ...item, tags, langs, platform, commission_type };
         })
 
-        for (let i = 0; i < data.length; i++) {
-            const {
-                link,
-                description,
-                image,
-                socials
-            } = await getRefs(page, data[i].uuid);
+        // for (let i = 0; i < data.length; i++) {
+        //     const {
+        //         link,
+        //         description,
+        //         image,
+        //         socials
+        //     } = await getRefs(page, data[i].uuid);
 
-            console.log(link);
-            console.log(description);
-            console.log(image);
-            console.log(socials);
+        //     console.log(link);
+        //     console.log(description);
+        //     console.log(image);
+        //     console.log(socials);
 
-            data[i].link = link;
-            data[i].description = description;
-            data[i].image = image;
-            data[i].socials = socials;
-            await new Promise((resolve, reject) => setTimeout(resolve, 3000));
-        }
+        //     data[i].link = link;
+        //     data[i].description = description;
+        //     data[i].image = image;
+        //     data[i].socials = socials;
+        //     await new Promise((resolve, reject) => setTimeout(resolve, 3000));
+        // }
 
         await Program.insertMany(data);
 
@@ -157,7 +148,7 @@ const getPrograms = async (page) => {
 };
 
 
-cron.schedule('*/30 * * * *', async () => {
+cron.schedule('* * */1 * *', async () => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
