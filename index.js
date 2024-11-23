@@ -16,8 +16,8 @@ let x_xsrf_token = '';
 
 const doLogin = async (page) => {
     try {
-        await page.goto('https://affilisting.com/login', { waitUntil: 'networkidle2' });
-        await page.waitForSelector('#email', { timeout: 10000 });
+        await page.goto('https://affilisting.com/login', { waitUntil: 'networkidle2', timeout: 300000 });
+        await page.waitForSelector('#email', { timeout: 300000 });
         await page.type('#email', process.env.EMAIL);
         await page.type('#password', process.env.PASSWORD);
         await page.click("button[type='submit']");
@@ -30,6 +30,7 @@ const doLogin = async (page) => {
 
 const getRefs = async (page, uuid) => {
     try {
+        console.log(uuid)
         const response = await page.goto(`https://affilisting.com/redirect/${uuid}/apply`, {
             waitUntil: 'networkidle2'
         });
@@ -107,13 +108,13 @@ const getPrograms = async (page) => {
         let { data = [], next_page_url = undefined } = json_data.props.affiliates;
 
         console.log(data)
-        
+
         if (next_page_url) {
             n = n + 1;
         } else
             n = 1;
 
-        data = data.map(async item => {
+        data = data.map(item => {
             const tags = item.tags.map(tag => tag.id);
             const commission_type = item.type?.machine_name;
             const langs = item.langs.map(item => item.id)
@@ -122,25 +123,26 @@ const getPrograms = async (page) => {
             return { ...item, tags, langs, platform, commission_type };
         })
 
-        // for (let i = 0; i < data.length; i++) {
-        //     const {
-        //         link,
-        //         description,
-        //         image,
-        //         socials
-        //     } = await getRefs(page, data[i].uuid);
+        for (let i = 0; i < data.length; i++) {
+            
+            const {
+                link,
+                description,
+                image,
+                socials
+            } = await getRefs(page, data[i].uuid);
 
-        //     console.log(link);
-        //     console.log(description);
-        //     console.log(image);
-        //     console.log(socials);
+            console.log(link);
+            console.log(description);
+            console.log(image);
+            console.log(socials);
 
-        //     data[i].link = link;
-        //     data[i].description = description;
-        //     data[i].image = image;
-        //     data[i].socials = socials;
-        //     await new Promise((resolve, reject) => setTimeout(resolve, 3000));
-        // }
+            data[i].link = link;
+            data[i].description = description;
+            data[i].image = image;
+            data[i].socials = socials;
+            await new Promise((resolve, reject) => setTimeout(resolve, 3000));
+        }
 
         await Program.insertMany(data);
 
@@ -149,16 +151,61 @@ const getPrograms = async (page) => {
     }
 };
 
+(async () => {
+    console.log(`Scraping page ${n}`);
+    try {
+        const browser = await puppeteer.launch({
+            headless: false,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            // env: {
+            //     DISPLAY: ":10.0"
+            // }
+        });
 
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 1920,
+            height: 1080,
+            deviceScaleFactor: 1,
+            isMobile: false
+        });
+
+        // Set request interception to capture the XSRF token
+        await page.setRequestInterception(true);
+        page.on('request', (request) => {
+            if (request.url().startsWith('https://affilisting.com/')) {
+                x_xsrf_token = request.headers()['x-xsrf-token'];
+            }
+            request.continue();
+        });
+
+        // Validate environment variables
+        if (!process.env.EMAIL || !process.env.PASSWORD) {
+            throw new Error('EMAIL and PASSWORD must be set in environment variables.');
+        }
+
+        await doLogin(page);
+        await getPrograms(page);
+
+        await page.screenshot({ path: 'example.png' });
+    } catch (error) {
+        console.error('An error occurred:', error);
+    } finally {
+        await browser.close(); // Ensure the browser closes regardless of errors
+    }
+}
+)()
+
+return;
 cron.schedule('* * */1 * *', async () => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            env: {
-                DISPLAY: ":10.0"
-            }
+            // env: {
+            //     DISPLAY: ":10.0"
+            // }
         });
 
         const page = await browser.newPage();
