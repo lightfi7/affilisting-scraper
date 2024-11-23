@@ -192,10 +192,12 @@ const getPrograms = async (page) => {
         await getPrograms(page);
 
         await page.screenshot({ path: 'example.png' });
+
+        await browser.close(); // Ensure the browser closes regardless of errors
+
     } catch (error) {
         console.error('An error occurred:', error);
     } finally {
-        await browser.close(); // Ensure the browser closes regardless of errors
     }
 })();
 
