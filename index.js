@@ -153,8 +153,11 @@ const getPrograms = async (page) => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            env: {
+                DISPLAY: ":10.0"
+            }
         });
 
         const page = await browser.newPage();
@@ -194,8 +197,11 @@ cron.schedule('* * */1 * *', async () => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            env: {
+                DISPLAY: ":10.0"
+            }
         });
 
         const page = await browser.newPage();
