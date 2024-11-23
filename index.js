@@ -42,7 +42,7 @@ const getRefs = async (page, uuid) => {
         const $ = cheerio.load(html);
         const socials = getSocials(html);
         const description = $('meta[name="description"]').attr('content');
-        const image = $('meta[name="og:image"]').attr('content');
+        const image = $('meta[property="og:image"]').attr('content');
         return {
             link,
             description,
