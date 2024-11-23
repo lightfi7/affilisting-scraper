@@ -157,7 +157,7 @@ const getPrograms = async (page) => {
 };
 
 
-cron.schedule('* * */1 * * *', async () => {
+cron.schedule('*/30 * * * *', async () => {
     console.log(`Scraping page ${n}`);
     try {
         const browser = await puppeteer.launch({
