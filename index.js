@@ -105,7 +105,9 @@ const getPrograms = async (page) => {
 
         const json_data = JSON.parse(json_string);
         let { data = [], next_page_url = undefined } = json_data.props.affiliates;
+
         console.log(data)
+        
         if (next_page_url) {
             n = n + 1;
         } else
