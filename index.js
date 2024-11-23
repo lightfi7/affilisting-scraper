@@ -34,7 +34,10 @@ const getRefs = async (page, uuid) => {
         const response = await page.goto(`https://affilisting.com/redirect/${uuid}/apply`, {
             waitUntil: 'networkidle2'
         });
-        const link = response.url();
+        let link = response.url();
+        const url = new URL(link);
+        link = 'https://' + url.hostname;
+        await page.goto(link, { waitUntil: 'networkidle2', timeout: 300000 });
         const html = await page.content();
         const $ = cheerio.load(html);
         const socials = getSocials(html);
@@ -124,7 +127,7 @@ const getPrograms = async (page) => {
         })
 
         for (let i = 0; i < data.length; i++) {
-            
+
             const {
                 link,
                 description,
@@ -151,50 +154,6 @@ const getPrograms = async (page) => {
     }
 };
 
-(async () => {
-    console.log(`Scraping page ${n}`);
-    try {
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            env: {
-                DISPLAY: ":10.0"
-            }
-        });
-
-        const page = await browser.newPage();
-        await page.setViewport({
-            width: 1920,
-            height: 1080,
-            deviceScaleFactor: 1,
-            isMobile: false
-        });
-
-        // Set request interception to capture the XSRF token
-        await page.setRequestInterception(true);
-        page.on('request', (request) => {
-            if (request.url().startsWith('https://affilisting.com/')) {
-                x_xsrf_token = request.headers()['x-xsrf-token'];
-            }
-            request.continue();
-        });
-
-        // Validate environment variables
-        if (!process.env.EMAIL || !process.env.PASSWORD) {
-            throw new Error('EMAIL and PASSWORD must be set in environment variables.');
-        }
-
-        await doLogin(page);
-        await getPrograms(page);
-
-        await page.screenshot({ path: 'example.png' });
-    } catch (error) {
-        console.error('An error occurred:', error);
-    } finally {
-        await browser.close(); // Ensure the browser closes regardless of errors
-    }
-}
-)()
 
 cron.schedule('*/30 * * * *', async () => {
     console.log(`Scraping page ${n}`);
