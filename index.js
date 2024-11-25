@@ -62,7 +62,7 @@ const loginToWebsite = async (page) => {
     }
 };
 
-const retrieveReferences = async (uuid) => {
+const retrieveReferences = async (page, uuid) => {
     try {
         let response = await makeRequest(`https://affilisting.com/redirect/${uuid}/apply`, cookieString);
 
@@ -71,12 +71,13 @@ const retrieveReferences = async (uuid) => {
 
         const urlObject = new URL(redirectedUrl);
         const parsedRedirectedUrl = 'https://' + urlObject.hostname;
+        await page.goto(parsedRedirectedUrl, {waitUntil: 'networkidle2', timeout: 300000 });
+        const htmlContent = await page.content();
 
-        response = await makeRequest(parsedRedirectedUrl, cookieString);
-        const htmlContent = response.data;
         const $ = cheerio.load(htmlContent);
 
         const socialMediaLinks = extractSocialLinks(htmlContent);
+        console.log(socialMediaLinks)
         const metaDescription = $('meta[name="description"]').attr('content');
         const metaImage = $('meta[property="og:image"]').attr('content');
 
@@ -151,7 +152,7 @@ const fetchProgramsData = async (page) => {
             const languagesArray = item.langs.map(langItem => langItem.id);
             const platformValue = item.platform?.id;
             Object.assign(item, { tags: tagsArray, langs: languagesArray, platform: platformValue, commission_type: commissionTypeValue });
-            const { link, description, image, socials = [] } = await retrieveReferences(item.uuid);
+            const { link, description, image, socials = [] } = await retrieveReferences(page, item.uuid);
             item.link = link;
             item.description = description;
             item.image = image;
