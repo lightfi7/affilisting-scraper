@@ -16,7 +16,11 @@ const agent = new https.Agent({
 
 
 
-mongoose.connect(process.env.MONGODB_URI, {})
+mongoose.connect(process.env.MONGODB_URI, {
+    authSource: "admin",
+    user: "devman",
+    pass: "mari2Ana23sem",
+})
     .then(() => console.log('Connected to MongoDB'))
     .catch(error => console.error('Failed to connect to MongoDB:', error));
 
@@ -71,7 +75,7 @@ const retrieveReferences = async (page, uuid) => {
 
         const urlObject = new URL(redirectedUrl);
         const parsedRedirectedUrl = 'https://' + urlObject.hostname;
-        await page.goto(parsedRedirectedUrl, {waitUntil: 'networkidle2', timeout: 300000 });
+        await page.goto(parsedRedirectedUrl, { waitUntil: 'networkidle2', timeout: 300000 });
         const htmlContent = await page.content();
 
         const $ = cheerio.load(htmlContent);
