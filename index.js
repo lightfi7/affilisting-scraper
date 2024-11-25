@@ -156,7 +156,7 @@ const fetchProgramsData = async (page) => {
             const languagesArray = item.langs.map(langItem => langItem.id);
             const platformValue = item.platform?.id;
             Object.assign(item, { tags: tagsArray, langs: languagesArray, platform: platformValue, commission_type: commissionTypeValue });
-            const { link, description, image, socials = [] } = await retrieveReferences(page, item.uuid);
+            const { link, description, image, socials } = await retrieveReferences(page, item.uuid);
             item.link = link;
             item.description = description;
             item.image = image;
