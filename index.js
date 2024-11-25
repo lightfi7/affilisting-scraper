@@ -160,7 +160,7 @@ const fetchProgramsData = async (page) => {
             item.link = link;
             item.description = description;
             item.image = image;
-            item.socials = socials;
+            item.contacts = socials;
             await new Promise((resolve, reject) => setTimeout(resolve, 3000));
         }
 
